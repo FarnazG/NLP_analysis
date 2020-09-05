@@ -30,11 +30,11 @@ This notebook analyzes reviews to extract required information and consists of:
 
 * Sentiment Analysis including Polarity and Subjectivity
 
-![alt text](https://github.com/FarnazG/project006/blob/master/images/display_polarity_over_time_for_each_specific_boutique.png)
+![alt text](https://github.com/FarnazG/project006/blob/master/images/Display_polarity_over_time_for_each_specific_boutique.png)
 
 * Comparing review_polarities vs review_star_ratings to reflect which term is more informative
 
-![alt text](https://github.com/FarnazG/project006/blob/master/images/compare_review_polarity_vs_review_star_ratings.png)
+![alt text](https://github.com/FarnazG/project006/blob/master/images/Compare_review_polarity_vs_review_star_ratings.png)
 
 * TF_IDF and word_count analysis to reflect how important a word is to a review and how many times it has been repeated
 
