@@ -180,3 +180,90 @@ class sentiment_analysis:
             plt.xlabel('Sentiment Polarity');
             title = 'Distribution of Review Sentiment by Star Rating'
             
+            
+class tfidf_analysis:
+    
+    def __init__(self, boutique_reviews, boutique_info):
+        self.boutique_reviews = boutique_reviews
+        self.boutique_info = boutique_info
+        
+    def clean_review(self, boutique_list):
+        for boutique in boutique_list:
+            boutique_df = self.boutique_reviews[self.boutique_reviews.boutique_names == boutique]
+            agg_function = {"number_reviews": lambda x: x.mean(), "reviews": lambda x: list(x),
+                            "review_dates": lambda x: list(x), "review_ratings": lambda x: list(x)}
+            boutique_df = boutique_df.groupby("boutique_names").aggregate(agg_function)
+            reviews = boutique_df.reviews.to_string()
+            # clean the reviews:
+            # 1.u'\xa0' represents a non-breaking space in the text block that needs to be removed.
+            reviews = reviews.replace(u'\xa0', u' ')
+            # 2.remove multiple fullstops and make a single fullstop
+            reviews = re.sub('\.+', '. ', reviews)
+            # 3.remove multiple spaces and make a single space.
+            reviews = re.sub(' +', ' ', reviews)
+            # 4.remove all tokens that are not alphabetic
+            reviews = re.sub(r'\d+', '', reviews)
+            # 5.normalization
+            reviews = reviews.lower()
+            
+            # 6.Define punctuations according to nltk corpus.
+            punctuations = '''!()-[]{};:'"\,<>/?@#$%^&*_~.+'''
+            # remove punctuations, traverse the given string and if any punctuation marks occur replace it with null
+            for i in reviews:
+                if i in punctuations:
+                    reviews = reviews.replace(i, "")
+            tokens = word_tokenize(reviews)
+            
+            # 7.remove stopwords
+            stop_words = set(stopwords.words('english'))
+            tokens = [token for token in tokens if not token in stop_words]
+            
+            # 8.return the cleaned text in a sentence format.
+            reviews = ' '.join([''.join(token) for token in tokens])
+            
+            # reviews = reviews.replace(reviews, new_reviews)
+            # 9.return the cleaned reviews as a list
+            reviews = [reviews]
+            # print(reviews)
+        return reviews
+    
+    def get_tfidf(self, reviews, boutique_list):
+        scores = []
+        for boutique in boutique_list:
+            # vectorizer = CountVectorizer()
+            vectorizer = TfidfVectorizer()
+            doc = vectorizer.fit_transform(reviews)
+            df = pd.DataFrame(doc.T.todense(), index=vectorizer.get_feature_names(), columns=["tfidf_scores"])
+            df["boutique_name"] = boutique
+            dd = self.boutique_info.loc[self.boutique_info["boutique_name"] == boutique, ["rating"]]
+            df["average_star_ratings"] = dd["rating"].to_list()[0]
+            df.sort_values(by=["tfidf_scores"], ascending=False, inplace=True)
+            df_boutique = df.head(10)
+            scores.append(df_boutique)            
+            # visualize the tfidf_scores bar plot
+            plt.rcParams["figure.figsize"] = [20, 5]
+            ax = df_boutique.iloc[0:10].plot.bar(rot=0, fontsize=15, alpha=0.5)  # , color = 'r')
+            ax.legend([boutique])            
+        return pd.concat(scores)
+        # return pd.DataFrame(doc.toarray(), columns=vectorizer.get_feature_names())#, index=boutique_names)
+    
+    def get_word_count(self, reviews, boutique_list):        
+        scores = []
+        for boutique in boutique_list:
+            vectorizer = CountVectorizer()
+            # vectorizer = TfidfVectorizer()
+            doc = vectorizer.fit_transform(reviews)
+            df = pd.DataFrame(doc.T.todense(), index=vectorizer.get_feature_names(), columns=["word_count"])
+            df["boutique_name"] = boutique
+            dd = self.boutique_info.loc[self.boutique_info["boutique_name"] == boutique, ["rating"]]
+            df["average_star_ratings"] = dd["rating"].to_list()[0]
+            df.sort_values(by=["word_count"], ascending=False, inplace=True)
+            df_boutique = df.head(10)
+            scores.append(df_boutique)            
+            # visualize the word_count bar plot
+            plt.rcParams["figure.figsize"] = [20, 5]
+            ax = df_boutique.iloc[0:10].plot.bar(rot=0, fontsize=15, alpha=0.5, color='r')
+            ax.legend([boutique])
+        return pd.concat(scores)
+    
+    
