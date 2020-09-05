@@ -267,3 +267,95 @@ class tfidf_analysis:
         return pd.concat(scores)
     
     
+class word_embedding:
+    
+    def __init__(self, boutique_reviews):
+        self.boutique_reviews = boutique_reviews
+        
+    def clean_review_word_embeding(self, text):
+        text = text.replace(u'\xa0', u' ')
+        text = re.sub('\.+', '. ', text)
+        text = re.sub(' +', ' ', text)
+        text = re.sub(r'\d+', '', text)
+        text = text.lower()
+        punctuations = '''!()-[]{};:'"\,<>/?@#$%^&*_~+'''
+        for i in text: 
+            if i in punctuations: 
+                text = text.replace(i, "") 
+
+        tokens = word_tokenize(text)
+        stop_words = set(stopwords.words('english'))
+        tokens = [token for token in tokens if not token in stop_words]
+        return ' '.join([''.join(token) for token in tokens])
+
+    def word2vec_model (self, boutique):
+        #1.Define training data for the model: collection of reviews based on their star ratings.
+        boutique_df = self.boutique_reviews[self.boutique_reviews.boutique_names == boutique]
+        agg_function = {"number_reviews":lambda x: x.mean(), "reviews": lambda x:x.sum(),
+                        "review_dates":lambda x:list(x)}
+        boutique_df = boutique_df.groupby(["boutique_names","review_ratings"]).aggregate(agg_function)
+
+        for rating in range(1,5):        
+            try:
+                print(boutique_df.reset_index()["review_ratings"][rating-1],":",len(boutique_df["review_dates"][rating-1]),"reviews","\n")
+                review_rating = boutique_df["reviews"][rating-1]            
+                review_rating = review_rating.replace(review_rating, self.clean_review_word_embeding(review_rating))
+                sentences = nltk.sent_tokenize(review_rating)
+                sentences = [nltk.word_tokenize(sentence) for sentence in sentences]
+
+                dot = ["."]
+                for j in range(len(sentences)):
+                    sentences[j] = [word for word in sentences[j] if word not in dot]
+                #print(sentences,"\n")
+
+                #2.train the model
+                model = Word2Vec(sentences, min_count=3)
+
+                #summarize vocabulary
+                words = list(model.wv.vocab)
+
+                #print(words)
+
+                # access vector for one word
+                # print(model['loving'])
+
+                #save model
+                #model.save('model.bin')
+
+                #load model
+                #new_model = Word2Vec.load('model.bin')
+                print("words in reviews with minimum_count of 3:",model,"\n")
+                #print(new_model,"\n")
+                #return new_model
+
+                #3.word embedding visualization using tsne model:
+                #"Creates TSNE model and plots it"
+                labels = []
+                tokens = []
+
+                for word in model.wv.vocab:
+                    tokens.append(model[word])
+                    labels.append(word)
+
+                tsne_model = TSNE(perplexity=30, n_components=2, init='pca', n_iter=2000, random_state=23)
+                new_values = tsne_model.fit_transform(tokens)
+
+                x = []
+                y = []
+                for value in new_values:
+                    x.append(value[0])
+                    y.append(value[1])
+
+                plt.figure(figsize=(20,10)) 
+                for i in range(len(x)):
+                    plt.scatter(x[i],y[i])
+                    plt.annotate(labels[i],
+                                 xy=(x[i], y[i]),
+                                 xytext=(5, 2),
+                                 textcoords='offset points',
+                                 ha='right',
+                                 va='bottom')
+                plt.show()
+
+            except:
+                pass
